@@ -9,7 +9,7 @@
             "s3transfer",
             "concurrent"
         ],
-        "project_name": "zappa-dolar",
+        "project_name": "Zappa-dolar",
         "runtime": "python3.10",
         "s3_bucket": "dolar-raw-eltimpeosj"
         
