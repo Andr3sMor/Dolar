@@ -20,7 +20,7 @@
         "events":[
             {
                 "function": "app.f",
-                "expression": "corn(0 23 * * ? *)"
+                "expression": "cron(0 23 * * ? *)"
             }
             
             ]
