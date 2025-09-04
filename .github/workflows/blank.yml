@@ -42,35 +42,11 @@ jobs:
             aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
             aws-region: us-east-1
 
-      - name: Run Tests
+      - name: Run Test
         run: |
           source env/bin/activate
           pytest
           
-
-      - name: Generate zappa_settings.json
-        run: |
-          cat > zappa_settings.json <<EOF
-          {
-            "dev": {
-              "app_function": "app.app",
-              "aws_region": "us-east-1",
-              "s3_bucket": "zappa-deployments-YOURBUCKET"
-            },
-            "db": {
-              "app_function": "db_loader.g",
-              "aws_region": "us-east-1",
-              "s3_bucket": "zappa-deployments-YOURBUCKET",
-              "environment_variables": {
-                "DB_HOST": "${{ secrets.DB_HOST }}",
-                "DB_USER": "${{ secrets.DB_USER }}",
-                "DB_PASS": "${{ secrets.DB_PASS }}",
-                "DB_NAME": "${{ secrets.DB_NAME }}"
-              }
-            }
-          }
-          EOF
-
 
             
       - name: Deploy with Zappa (dollar downloader)
@@ -90,3 +66,9 @@ jobs:
           else
             zappa deploy db
           fi
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+      
