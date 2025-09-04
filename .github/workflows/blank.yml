@@ -49,7 +49,7 @@ jobs:
           
 
             
-      - name: Deploy with Zappa
+      - name: Deploy with Zappa (dollar downloader)
         run: |
           source env/bin/activate
           if zappa status dev; then
@@ -57,4 +57,18 @@ jobs:
           else
             zappa deploy dev
           fi
+      
+      - name: Deploy Zappa (DB loader)
+        run: |
+          source env/bin/activate
+          if zappa status db; then
+            zappa update db
+          else
+            zappa deploy db
+          fi
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          DB_NAME: ${{ secrets.DB_NAME }}
       
