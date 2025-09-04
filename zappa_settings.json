@@ -46,19 +46,6 @@
             "DB_PASS": "${DB_PASS}",
             "DB_NAME": "${DB_NAME}"
         },
-        "vpc_config": {
-            "SubnetIds": [
-                "subnet-043f534d369e75ade",
-                "subnet-0e8578e55a1200780",
-                "subnet-083573abae1234c7e",
-                "subnet-08ea89d3c7ec35845",
-                "subnet-0f3974a54a8e674e8"
-            ],
-            "SecurityGroupIds": [
-                "sg-0e708a092a108034c",
-                "sg-0305a8f6d6e2ccfce"
-            ]
-        },
         "events": [
             {
                 "function": "db_loader.g",
