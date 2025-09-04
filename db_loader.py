@@ -5,17 +5,18 @@ import boto3
 import pymysql
 import datetime
 
-# --- Validación temprana de variables de entorno ---
-required_env_vars = ["DB_HOST", "DB_USER", "DB_PASS", "DB_NAME"]
-missing = [var for var in required_env_vars if var not in os.environ]
-
-if missing:
-    sys.exit(f"*** ERROR: Missing environment variables: {', '.join(missing)} ***")
-# ---------------------------------------------------
-
 s3 = boto3.client("s3")
 
 def g(event, context):
+    # --- Validación temprana de variables de entorno ---
+    required_env_vars = ["DB_HOST", "DB_USER", "DB_PASS", "DB_NAME"]
+    missing = [var for var in required_env_vars if var not in os.environ]
+
+    if missing:
+        print(f"*** ERROR: Missing environment variables: {', '.join(missing)} ***")
+        return {"status": "error", "missing": missing}
+    # ---------------------------------------------------
+
     # Nombre del bucket y del archivo desde el evento
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
