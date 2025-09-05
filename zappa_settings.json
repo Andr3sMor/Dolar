@@ -52,10 +52,13 @@
                 "event_source": {
                     "arn": "arn:aws:s3:::dolar-raw-eltimpeosj",
                     "events": ["s3:ObjectCreated:*"],
-                    "filters": {
-                        "suffix": ".json"
-                    }
-                }
+                    "filters": [
+                        {
+                        "name": "suffix",
+                        "value": ".json"
+                        }
+                    ]
+                }   
             }
         ]
     }
