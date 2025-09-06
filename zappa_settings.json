@@ -8,7 +8,6 @@
             "botocore",
             "s3transfer",
             "concurrent",
-            "polars"
         ],
         "project_name": "zappa-dolar",
         "runtime": "python3.10",
