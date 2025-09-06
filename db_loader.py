@@ -4,9 +4,11 @@ import pymysql
 import datetime
 import json
 from io import BytesIO
+import polars as pl
+
+s3 = boto3.client("s3")
 
 def g(event, context):
-    import polars as pl
     print("Instancing..")
     print(f"Zappa Event: {event}")
 
@@ -18,7 +20,6 @@ def g(event, context):
     print(f">>> Procesando archivo {key} desde {bucket}")
 
     # 2. Descargar archivo desde S3
-    s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=bucket, Key=key)
     body = obj["Body"].read()
 
