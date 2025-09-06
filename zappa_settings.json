@@ -42,6 +42,7 @@
         "apigateway_enabled": false,
         "manage_roles": false,
         "role_name": "Labrole",
+        "slim_handler":true,
         "environment_variables": {
             "DB_HOST": "${DB_HOST}",
             "DB_USER": "${DB_USER}",
