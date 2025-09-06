@@ -47,6 +47,7 @@ jobs:
           source env/bin/activate
           pytest
           pip uninstall -y polars
+          pip freeze > requirements.txt
 
             
       - name: Deploy with Zappa (dollar downloader)
@@ -69,7 +70,6 @@ jobs:
       - name: Deploy Zappa (DB loader)
         run: |
           source env/bin/activate
-          pip uninstall -y polars
           if zappa status db; then
             zappa update db
           else
