@@ -1,66 +1,65 @@
 {
-    "dev": {
-        "app_function": "app.f",
-        "aws_region": "us-east-1",
-        "exclude": [
-            "boto3",
-            "dateutil",
-            "botocore",
-            "s3transfer",
-            "concurrent",
-        ],
-        "project_name": "zappa-dolar",
-        "runtime": "python3.10",
-        "s3_bucket": "dolar-raw-eltimpeosj",
-        "keep_warm": false,
-        "apigateway_enabled": false,
-        "manage_roles": false,
-        "role_name": "Labrole",
-        "events": [
-            {
-                "function": "app.f",
-                "expression": "cron(10 2 ? * * *)"
-            }
-        ]
+  "dev": {
+    "app_function": "app.f",
+    "aws_region": "us-east-1",
+    "exclude": [
+      "boto3",
+      "dateutil",
+      "botocore",
+      "s3transfer",
+      "concurrent"
+    ],
+    "project_name": "zappa-dolar",
+    "runtime": "python3.10",
+    "s3_bucket": "dolar-raw-eltimpeosj",
+    "keep_warm": false,
+    "apigateway_enabled": false,
+    "manage_roles": false,
+    "role_name": "Labrole",
+    "events": [
+      {
+        "function": "app.f",
+        "expression": "cron(10 2 ? * * *)"
+      }
+    ]
+  },
+  "db": {
+    "app_function": "db_loader.g",
+    "aws_region": "us-east-1",
+    "exclude": [
+      "boto3",
+      "dateutil",
+      "botocore",
+      "s3transfer",
+      "concurrent"
+    ],
+    "project_name": "zappa-db-loader",
+    "runtime": "python3.10",
+    "s3_bucket": "dolar-raw-eltimpeosj",
+    "keep_warm": false,
+    "apigateway_enabled": false,
+    "manage_roles": false,
+    "role_name": "Labrole",
+    "environment_variables": {
+      "DB_HOST": "${DB_HOST}",
+      "DB_USER": "${DB_USER}",
+      "DB_PASS": "${DB_PASS}",
+      "DB_NAME": "${DB_NAME}"
     },
-    "db": {
-        "app_function": "db_loader.g",
-        "aws_region": "us-east-1",
-        "exclude": [
-            "boto3",
-            "dateutil",
-            "botocore",
-            "s3transfer",
-            "concurrent",
-        ],
-        "project_name": "zappa-db-loader",
-        "runtime": "python3.10",
-        "s3_bucket": "dolar-raw-eltimpeosj",
-        "keep_warm": false,
-        "apigateway_enabled": false,
-        "manage_roles": false,
-        "role_name": "Labrole",
-        "slim_handler":true,
-        "environment_variables": {
-            "DB_HOST": "${DB_HOST}",
-            "DB_USER": "${DB_USER}",
-            "DB_PASS": "${DB_PASS}",
-            "DB_NAME": "${DB_NAME}"
-        },
-        "events": [
+    "events": [
+      {
+        "function": "db_loader.g",
+        "event_source": {
+          "arn": "arn:aws:s3:::dolar-raw-eltimpeosj",
+          "events": ["s3:ObjectCreated:*"],
+          "filters": [
             {
-                "function": "db_loader.g",
-                "event_source": {
-                    "arn": "arn:aws:s3:::dolar-raw-eltimpeosj",
-                    "events": ["s3:ObjectCreated:*"],
-                    "filters": [
-                        {
-                            "name": "suffix",
-                            "value": ".json"
-                        }
-                    ]
-                }
+              "name": "suffix",
+              "value": ".json"
             }
-        ]
-    }
+          ]
+        }
+      }
+    ]
+  }
 }

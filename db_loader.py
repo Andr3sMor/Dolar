@@ -1,107 +1,71 @@
 import os
-import pymysql
-import logging
-import boto3
 import json
-from io import BytesIO
+import boto3
+from datetime import datetime
+import pymysql
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-def g(event, context):
-    print("Instancing..")
-    print(f"Zappa Event: {event}")
-
-    # 🔹 Paso 0: Validar conexión a DB antes de cualquier otra cosa
+def g(event, context, db_conn=None):
+    """
+    Lambda que carga datos de un archivo JSON en S3 a MySQL.
+    - db_conn: opcional, para inyectar conexión falsa en tests.
+    """
     try:
-        connection = pymysql.connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS"),
-            database=os.getenv("DB_NAME"),
-            connect_timeout=5,
-        )
-        print("✅ Conexión a DB exitosa")
+        print(">>> Iniciando Lambda db_loader...")
 
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT NOW();")
-            result = cursor.fetchone()
-            print("🕒 Hora actual en DB:", result)
+        # 1. Extraer info del evento S3
+        record = event["Records"][0]
+        bucket = record["s3"]["bucket"]["name"]
+        key = record["s3"]["object"]["key"]
+        print(f">>> Procesando archivo {key} desde bucket {bucket}")
 
-        connection.close()
-    except Exception as e:
-        print("❌ Error al conectar a DB:", str(e))
-        raise
-    import polars as pl  
-    # 🔹 Paso 1: Extraer info del S3 event
-    record = event["Records"][0]
-    bucket = record["s3"]["bucket"]["name"]
-    key = record["s3"]["object"]["key"]
-    print(f">>> Procesando archivo {key} desde {bucket}")
+        # 2. Descargar archivo desde S3
+        s3 = boto3.client("s3")
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        body = obj["Body"].read()
+        print(f">>> Archivo descargado, {len(body)} bytes")
 
-    # 🔹 Paso 2: Descargar archivo desde S3
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=bucket, Key=key)
-    body = obj["Body"].read()
+        # 3. Cargar JSON
+        data = json.loads(body)
+        print(f">>> JSON cargado correctamente: {type(data)}")
 
-    # 🔹 Paso 3: Intentar leer como objetos JSON primero
-    try:
-        df = pl.read_json(BytesIO(body))
-        print("Formato detectado: JSON de objetos")
-    except Exception:
-        print("Formato detectado: JSON de arrays")
-        raw = json.loads(body.decode("utf-8"))
-        df = pl.DataFrame(raw, schema=["timestamp", "valor"])
-        df = df.with_columns([
-            (pl.col("timestamp").cast(pl.Int64) / 1000)
-            .cast(pl.Datetime("ms"))
-            .alias("fechahora"),
-            pl.col("valor").cast(pl.Float64)
-        ])
-        df = df.select(["fechahora", "valor"])
+        # 4. Convertir datos
+        rows = []
+        for i, row in enumerate(data):
+            timestamp_ms, valor = row
+            fechahora = datetime.fromtimestamp(int(timestamp_ms) / 1000)
+            valor = float(valor)
+            rows.append((fechahora, valor))
+            if i < 5:
+                print(f"Fila {i}: {row} → ({fechahora}, {valor})")
+        print(f">>> Total de filas preparadas: {len(rows)}")
 
-    # 4. Si vienen columnas separadas de fecha+hora
-    if "fecha" in df.columns and "hora" in df.columns:
-        df = df.with_columns([
-            pl.concat_str([pl.col("fecha"), pl.col("hora")], separator=" ").alias("fechahora")
-        ])
-    elif "timestamp" in df.columns and "fechahora" not in df.columns:
-        df = df.with_columns([
-            (pl.col("timestamp").cast(pl.Int64) / 1000)
-            .cast(pl.Datetime("ms"))
-            .alias("fechahora")
-        ])
+        # 5. Conectar a la DB si no hay conexión inyectada
+        if db_conn is None:
+            print(">>> Conectando a DB real...")
+            db_conn = pymysql.connect(
+                host=os.getenv("DB_HOST"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASS"),
+                database=os.getenv("DB_NAME"),
+                cursorclass=pymysql.cursors.Cursor,
+            )
 
-    # 5. Validaciones finales
-    if "fechahora" not in df.columns:
-        raise ValueError("El JSON debe contener 'fechahora' o 'timestamp' convertible a datetime")
-    if "valor" not in df.columns:
-        raise ValueError("El JSON debe contener la columna 'valor'")
-
-    # 6. Conectar a MySQL
-    connection = pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME"),
-        cursorclass=pymysql.cursors.Cursor,
-    )
-
-    # 7. Insertar en batch
-    with connection.cursor() as cursor:
-        insert_query = """
-            INSERT INTO dolar_data (fechahora, valor)
-            VALUES (%s, %s)
-        """
-        data = [(fh, val) for fh, val in zip(df["fechahora"].to_list(), df["valor"].to_list())]
-
+        # 6. Insertar en batch
+        cursor = db_conn.cursor()
+        insert_query = "INSERT INTO dolar (fechahora, valor) VALUES (%s, %s)"
         chunk_size = 500
-        for i in range(0, len(data), chunk_size):
-            batch = data[i:i+chunk_size]
+        for i in range(0, len(rows), chunk_size):
+            batch = rows[i:i + chunk_size]
             cursor.executemany(insert_query, batch)
 
-    connection.commit()
-    connection.close()
+        db_conn.commit()
+        cursor.close()
+        if db_conn and db_conn != db_conn:  # cerrar solo si es real
+            db_conn.close()
 
-    print(f"Inserción completada: {len(df)} registros")
-    return {"status": "ok", "rows": len(df)}
+        print(f">>> Inserción completada: {len(rows)} registros")
+        return {"status": "ok", "rows": len(rows)}
+
+    except Exception as e:
+        print(">>> ERROR en Lambda:", e)
+        return {"status": "error", "message": str(e)}
