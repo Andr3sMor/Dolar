@@ -1,38 +1,58 @@
 import os
-import boto3
 import pymysql
-import datetime
+import logging
+import boto3
+import polars as pl
 import json
 from io import BytesIO
-import polars as pl
 
-s3 = boto3.client("s3")
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def g(event, context):
     print("Instancing..")
     print(f"Zappa Event: {event}")
 
-    # 1. Extraer info del S3 event
+    # 🔹 Paso 0: Validar conexión a DB antes de cualquier otra cosa
+    try:
+        connection = pymysql.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASS"),
+            database=os.getenv("DB_NAME"),
+            connect_timeout=5,
+        )
+        print("✅ Conexión a DB exitosa")
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT NOW();")
+            result = cursor.fetchone()
+            print("🕒 Hora actual en DB:", result)
+
+        connection.close()
+    except Exception as e:
+        print("❌ Error al conectar a DB:", str(e))
+        raise
+
+    # 🔹 Paso 1: Extraer info del S3 event
     record = event["Records"][0]
     bucket = record["s3"]["bucket"]["name"]
     key = record["s3"]["object"]["key"]
-
     print(f">>> Procesando archivo {key} desde {bucket}")
 
-    # 2. Descargar archivo desde S3
+    # 🔹 Paso 2: Descargar archivo desde S3
+    s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=bucket, Key=key)
     body = obj["Body"].read()
 
-    # 3. Intentar leer como objetos JSON primero
+    # 🔹 Paso 3: Intentar leer como objetos JSON primero
     try:
         df = pl.read_json(BytesIO(body))
         print("Formato detectado: JSON de objetos")
     except Exception:
-        # Si falla, probar como array de arrays
         print("Formato detectado: JSON de arrays")
         raw = json.loads(body.decode("utf-8"))
         df = pl.DataFrame(raw, schema=["timestamp", "valor"])
-        # convertir timestamp ms → datetime
         df = df.with_columns([
             (pl.col("timestamp").cast(pl.Int64) / 1000)
             .cast(pl.Datetime("ms"))
