@@ -31,7 +31,8 @@
             "dateutil",
             "botocore",
             "s3transfer",
-            "concurrent"
+            "concurrent",
+            "polars"
         ],
         "project_name": "zappa-db-loader",
         "runtime": "python3.10",
@@ -46,6 +47,9 @@
             "DB_PASS": "${DB_PASS}",
             "DB_NAME": "${DB_NAME}"
         },
+        "layers": [
+            "arn:aws:lambda:us-east-1:946335683215:layer:polars:2"
+        ],
         "events": [
             {
                 "function": "db_loader.g",
@@ -54,11 +58,11 @@
                     "events": ["s3:ObjectCreated:*"],
                     "filters": [
                         {
-                        "name": "suffix",
-                        "value": ".json"
+                            "name": "suffix",
+                            "value": ".json"
                         }
                     ]
-                }   
+                }
             }
         ]
     }
