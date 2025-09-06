@@ -46,7 +46,7 @@ jobs:
         run: |
           source env/bin/activate
           pytest
-          
+          pip uninstall -y polars
 
             
       - name: Deploy with Zappa (dollar downloader)
