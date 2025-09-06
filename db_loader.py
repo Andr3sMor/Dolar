@@ -1,12 +1,12 @@
 import os
 import boto3
-import polars as pl
 import pymysql
 import datetime
 import json
 from io import BytesIO
 
 def g(event, context):
+    import polars as pl
     print("Instancing..")
     print(f"Zappa Event: {event}")
 
