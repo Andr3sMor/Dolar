@@ -2,7 +2,6 @@ import os
 import pymysql
 import logging
 import boto3
-import polars as pl
 import json
 from io import BytesIO
 
@@ -33,7 +32,7 @@ def g(event, context):
     except Exception as e:
         print("❌ Error al conectar a DB:", str(e))
         raise
-
+    import polars as pl  
     # 🔹 Paso 1: Extraer info del S3 event
     record = event["Records"][0]
     bucket = record["s3"]["bucket"]["name"]
