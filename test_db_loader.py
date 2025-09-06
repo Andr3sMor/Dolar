@@ -30,7 +30,10 @@ def test_db_loader(monkeypatch):
             for vals in seq_of_vals:
                 self.execute(q, vals)
     
-        def close(self): 
+        def fetchone(self):
+            return ("2025-09-04 12:00:00",)  # valor dummy para el test
+    
+        def close(self):
             pass
     
         def __enter__(self):
@@ -38,7 +41,7 @@ def test_db_loader(monkeypatch):
     
         def __exit__(self, exc_type, exc_val, exc_tb):
             pass
-    
+
     
     class FakeConn:
         def cursor(self): 
