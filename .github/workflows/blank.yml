@@ -70,6 +70,8 @@ jobs:
       - name: Deploy Zappa (DB loader)
         run: |
           source env/bin/activate
+          pip install polars
+          pip freeze > requirements.txt
           if zappa status db; then
             zappa update db
           else
