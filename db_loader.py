@@ -4,11 +4,12 @@ import boto3
 from datetime import datetime
 import pymysql
 
-def g(event, context, db_conn=None):
+def g(event, context):
     """
     Lambda que carga datos de un archivo JSON en S3 a MySQL.
-    - db_conn: opcional, para inyectar conexión falsa en tests.
+    Permite inyectar conexión para tests a través de context.db_conn.
     """
+    db_conn = getattr(context, "db_conn", None)  # solo para tests
     try:
         print(">>> Iniciando Lambda db_loader...")
 
@@ -40,6 +41,7 @@ def g(event, context, db_conn=None):
         print(f">>> Total de filas preparadas: {len(rows)}")
 
         # 5. Conectar a la DB si no hay conexión inyectada
+        cerrar_conexion = False
         if db_conn is None:
             print(">>> Conectando a DB real...")
             db_conn = pymysql.connect(
@@ -49,6 +51,7 @@ def g(event, context, db_conn=None):
                 database=os.getenv("DB_NAME"),
                 cursorclass=pymysql.cursors.Cursor,
             )
+            cerrar_conexion = True  # solo cerrar si es real
 
         # 6. Insertar en batch
         cursor = db_conn.cursor()
@@ -57,10 +60,10 @@ def g(event, context, db_conn=None):
         for i in range(0, len(rows), chunk_size):
             batch = rows[i:i + chunk_size]
             cursor.executemany(insert_query, batch)
-
         db_conn.commit()
         cursor.close()
-        if db_conn and db_conn != db_conn:  # cerrar solo si es real
+
+        if cerrar_conexion:
             db_conn.close()
 
         print(f">>> Inserción completada: {len(rows)} registros")
