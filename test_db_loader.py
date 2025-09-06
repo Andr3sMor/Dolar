@@ -23,12 +23,34 @@ def test_db_loader(monkeypatch):
 
     # Mockear conexión a DB
     class FakeCursor:
-        def execute(self, q, vals): print("SQL:", q, vals)
-        def close(self): pass
+        def execute(self, q, vals=None):
+            print("SQL execute:", q, vals)
+    
+        def executemany(self, q, seq_of_vals):
+            for vals in seq_of_vals:
+                self.execute(q, vals)
+    
+        def close(self): 
+            pass
+    
+        def __enter__(self):
+            return self
+    
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+    
+    
     class FakeConn:
-        def cursor(self): return FakeCursor()
-        def commit(self): pass
-        def close(self): pass
+        def cursor(self): 
+            return FakeCursor()
+    
+        def commit(self): 
+            print("COMMIT")
+    
+        def close(self): 
+            print("CLOSE")
+
+
 
     monkeypatch.setattr(pymysql, "connect", lambda **kwargs: FakeConn())
 

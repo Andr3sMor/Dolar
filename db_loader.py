@@ -1,55 +1,87 @@
 import os
-import sys
-import json
 import boto3
+import polars as pl
 import pymysql
 import datetime
-
-s3 = boto3.client("s3")
+import json
+from io import BytesIO
 
 def g(event, context):
-    # --- Validación temprana de variables de entorno ---
-    required_env_vars = ["DB_HOST", "DB_USER", "DB_PASS", "DB_NAME"]
-    missing = [var for var in required_env_vars if var not in os.environ]
+    print("Instancing..")
+    print(f"Zappa Event: {event}")
 
-    if missing:
-        print(f"*** ERROR: Missing environment variables: {', '.join(missing)} ***")
-        return {"status": "error", "missing": missing}
-    # ---------------------------------------------------
-
-    # Nombre del bucket y del archivo desde el evento
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    key = event["Records"][0]["s3"]["object"]["key"]
+    # 1. Extraer info del S3 event
+    record = event["Records"][0]
+    bucket = record["s3"]["bucket"]["name"]
+    key = record["s3"]["object"]["key"]
 
     print(f">>> Procesando archivo {key} desde {bucket}")
 
-    # Descargar el JSON de S3
-    response = s3.get_object(Bucket=bucket, Key=key)
-    data = json.loads(response["Body"].read().decode("utf-8"))
+    # 2. Descargar archivo desde S3
+    s3 = boto3.client("s3")
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    body = obj["Body"].read()
 
-    # Conectar a la DB
-    conn = pymysql.connect(
-        host=os.environ["DB_HOST"],
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASS"],
-        database=os.environ["DB_NAME"]
+    # 3. Intentar leer como objetos JSON primero
+    try:
+        df = pl.read_json(BytesIO(body))
+        print("Formato detectado: JSON de objetos")
+    except Exception:
+        # Si falla, probar como array de arrays
+        print("Formato detectado: JSON de arrays")
+        raw = json.loads(body.decode("utf-8"))
+        df = pl.DataFrame(raw, schema=["timestamp", "valor"])
+        # convertir timestamp ms → datetime
+        df = df.with_columns([
+            (pl.col("timestamp").cast(pl.Int64) / 1000)
+            .cast(pl.Datetime("ms"))
+            .alias("fechahora"),
+            pl.col("valor").cast(pl.Float64)
+        ])
+        df = df.select(["fechahora", "valor"])
+
+    # 4. Si vienen columnas separadas de fecha+hora
+    if "fecha" in df.columns and "hora" in df.columns:
+        df = df.with_columns([
+            pl.concat_str([pl.col("fecha"), pl.col("hora")], separator=" ").alias("fechahora")
+        ])
+    elif "timestamp" in df.columns and "fechahora" not in df.columns:
+        df = df.with_columns([
+            (pl.col("timestamp").cast(pl.Int64) / 1000)
+            .cast(pl.Datetime("ms"))
+            .alias("fechahora")
+        ])
+
+    # 5. Validaciones finales
+    if "fechahora" not in df.columns:
+        raise ValueError("El JSON debe contener 'fechahora' o 'timestamp' convertible a datetime")
+    if "valor" not in df.columns:
+        raise ValueError("El JSON debe contener la columna 'valor'")
+
+    # 6. Conectar a MySQL
+    connection = pymysql.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        database=os.getenv("DB_NAME"),
+        cursorclass=pymysql.cursors.Cursor,
     )
-    cursor = conn.cursor()
 
-    # Insertar un registro por cada objeto del JSON
-    for row in data:
-        ts_ms = int(row[0])  # timestamp en milisegundos
-        fechahora = datetime.datetime.utcfromtimestamp(ts_ms / 1000)
-        valor = float(row[1])
+    # 7. Insertar en batch
+    with connection.cursor() as cursor:
+        insert_query = """
+            INSERT INTO dolar_data (fechahora, valor)
+            VALUES (%s, %s)
+        """
+        data = [(fh, val) for fh, val in zip(df["fechahora"].to_list(), df["valor"].to_list())]
 
-        cursor.execute(
-            "INSERT INTO dolar (fechahora, valor) VALUES (%s, %s)",
-            (fechahora, valor)
-        )
+        chunk_size = 500
+        for i in range(0, len(data), chunk_size):
+            batch = data[i:i+chunk_size]
+            cursor.executemany(insert_query, batch)
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+    connection.commit()
+    connection.close()
 
-    print(">>> Datos insertados correctamente en la DB")
-    return {"status": "ok"}
+    print(f"Inserción completada: {len(df)} registros")
+    return {"status": "ok", "rows": len(df)}
