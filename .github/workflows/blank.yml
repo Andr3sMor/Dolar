@@ -47,7 +47,7 @@ jobs:
           source venv/bin/activate
           pytest
           
-      - name: Install python requirements_test.txt
+      - name: Install python requirements.txt
         run: |
           python3 -m venv env
           source env/bin/activate
