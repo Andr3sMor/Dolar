@@ -69,6 +69,7 @@ jobs:
       - name: Deploy Zappa (DB loader)
         run: |
           source env/bin/activate
+          pip uninstall -y polars
           if zappa status db; then
             zappa update db
           else
