@@ -7,7 +7,10 @@
             "dateutil",
             "botocore",
             "s3transfer",
-            "concurrent"
+            "concurrent",
+            "requirements-api.txt", 
+            "requirements-test.txt",
+            "test
         ],
         "project_name": "zappa-dolar",
         "runtime": "python3.10",
@@ -32,6 +35,9 @@
             "botocore",
             "s3transfer",
             "concurrent",
+            "requirements-api.txt", 
+            "requirements-test.txt",
+            "test"
         ],
         "project_name": "zappa-db-loader",
         "runtime": "python3.10",

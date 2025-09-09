@@ -19,6 +19,7 @@ docker==7.1.0
 durationpy==0.10
 email-validator==2.3.0
 exceptiongroup==1.3.0
+fastapi==0.116.1
 fastapi-cli==0.0.11
 fastapi-cloud-cli==0.1.5
 graphql-core==3.2.6
