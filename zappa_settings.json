@@ -9,8 +9,7 @@
             "s3transfer",
             "concurrent",
             "requirements-api.txt", 
-            "requirements-test.txt",
-            "test
+            "requirements-test.txt"
         ],
         "project_name": "zappa-dolar",
         "runtime": "python3.10",
@@ -36,8 +35,7 @@
             "s3transfer",
             "concurrent",
             "requirements-api.txt", 
-            "requirements-test.txt",
-            "test"
+            "requirements-test.txt"
         ],
         "project_name": "zappa-db-loader",
         "runtime": "python3.10",
