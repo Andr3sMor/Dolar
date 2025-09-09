@@ -58,3 +58,7 @@ def consultar_valores(consulta: Consulta):
 
     datos = [ValorItem(fechahora=str(r["fechahora"]), valor=r["valor"]) for r in resultados]
     return Respuesta(datos=datos)
+
+@app.get("/big")
+def hola():
+    return {"Big Data"}
