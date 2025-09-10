@@ -1,6 +1,6 @@
 {
     "dev": {
-        "app_function": "app.ejecutar_lambda",
+        "app_function": "app.ejecutar_lambda", 
         "aws_region": "us-east-1",
         "exclude": [
             "boto3",
@@ -18,13 +18,13 @@
         "role_name": "Labrole",
         "events": [
             {
-                "function": "app.ejecutar_lambda",
-                "expression": "cron(44 21 * * ? *)"
+                "function": "app.ejecutar_lambda", 
+                "expression": "cron(59 21 * * ? *)"
             }
         ]
     },
     "s3_to_mysql": {
-        "app_function": "s3_to_mysql.cargar_datos",
+        "app_function": "s3_to_mysql.g", 
         "aws_region": "us-east-1",
         "exclude": [
             "boto3",
@@ -48,7 +48,7 @@
         },
         "events": [
             {
-                "function": "s3_to_mysql.cargar_datos",
+                "function": "s3_to_mysql.g", 
                 "event_source": {
                     "arn": "arn:aws:s3:::dolar-raw-awsmm",
                     "events": ["s3:ObjectCreated:*"],

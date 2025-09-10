@@ -48,6 +48,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Replace env vars in zappa_settings.json
+        run: |
+          sed -i "s|\${DB_HOST}|${{ secrets.DB_HOST }}|g" zappa_settings.json
+          sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" zappa_settings.json
+          sed -i "s|\${DB_PASS}|${{ secrets.DB_PASS }}|g" zappa_settings.json
+          sed -i "s|\${DB_NAME}|${{ secrets.DB_NAME }}|g" zappa_settings.json
+
       - name: Install lambda dependencies
         run: |
           python3 -m venv env-lambda
@@ -71,13 +78,6 @@ jobs:
           else
             zappa deploy dev
           fi
-
-      - name: Replace env vars in zappa_settings.json
-        run: |
-          sed -i "s|\${DB_HOST}|${{ secrets.DB_HOST }}|g" zappa_settings.json
-          sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" zappa_settings.json
-          sed -i "s|\${DB_PASS}|${{ secrets.DB_PASS }}|g" zappa_settings.json
-          sed -i "s|\${DB_NAME}|${{ secrets.DB_NAME }}|g" zappa_settings.json
 
       - name: Deploy Zappa (s3_to_mysql)
         run: |

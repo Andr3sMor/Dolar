@@ -4,64 +4,71 @@ import boto3
 from datetime import datetime
 import pymysql
 
-def cargar_datos(event, context):
+def g(event, context):
     """
-    Lambda que recibe un evento de S3 y carga datos a MySQL.
+    Lambda que carga datos de un archivo JSON en S3 a MySQL.
+    Permite inyectar conexión para tests a través de context.db_conn.
     """
-    conexion_db = getattr(context, "db_conn", None) 
+    db_conn = getattr(context, "db_conn", None)  # solo para tests
     try:
-        print(">>> Iniciando Lambda carga S3 → MySQL...")
+        print(">>> Iniciando Lambda db_loader...")
 
-        # 1. Extraer evento de S3
+        # 1. Extraer info del evento S3
         record = event["Records"][0]
         bucket = record["s3"]["bucket"]["name"]
         key = record["s3"]["object"]["key"]
-        print(f">>> Archivo recibido: {key} desde bucket {bucket}")
+        print(f">>> Procesando archivo {key} desde bucket {bucket}")
 
-        # 2. Descargar objeto de S3
-        s3_client = boto3.client("s3")
-        objeto = s3_client.get_object(Bucket=bucket, Key=key)
-        contenido = objeto["Body"].read()
-        print(f">>> Descargados {len(contenido)} bytes")
+        # 2. Descargar archivo desde S3
+        s3 = boto3.client("s3")
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        body = obj["Body"].read()
+        print(f">>> Archivo descargado, {len(body)} bytes")
 
-        # 3. Parsear JSON
-        registros = json.loads(contenido)
-        filas = []
-        for i, (ts, valor) in enumerate(registros):
-            fecha = datetime.fromtimestamp(int(ts) / 1000)
-            filas.append((fecha, float(valor)))
-            if i < 3:
-                print(f"Ejemplo fila {i}: {ts} → {fecha}, {valor}")
+        # 3. Cargar JSON
+        data = json.loads(body)
+        print(f">>> JSON cargado correctamente: {type(data)}")
 
-        print(f">>> Total filas preparadas: {len(filas)}")
+        # 4. Convertir datos
+        rows = []
+        for i, row in enumerate(data):
+            timestamp_ms, valor = row
+            fechahora = datetime.fromtimestamp(int(timestamp_ms) / 1000)
+            valor = float(valor)
+            rows.append((fechahora, valor))
+            if i < 5:
+                print(f"Fila {i}: {row} → ({fechahora}, {valor})")
+        print(f">>> Total de filas preparadas: {len(rows)}")
 
-        # 4. Conexión DB real si no se inyecta
-        cerrar = False
-        if conexion_db is None:
-            conexion_db = pymysql.connect(
+        # 5. Conectar a la DB si no hay conexión inyectada
+        cerrar_conexion = False
+        if db_conn is None:
+            print(">>> Conectando a DB real...")
+            db_conn = pymysql.connect(
                 host=os.getenv("DB_HOST"),
                 user=os.getenv("DB_USER"),
                 password=os.getenv("DB_PASS"),
                 database=os.getenv("DB_NAME"),
                 cursorclass=pymysql.cursors.Cursor,
             )
-            cerrar = True
+            cerrar_conexion = True  # solo cerrar si es real
 
-        # 5. Insertar en batch
-        cursor = conexion_db.cursor()
-        insert_sql = "INSERT INTO dolar (fechahora, valor) VALUES (%s, %s)"
-        batch_size = 500
-        for i in range(0, len(filas), batch_size):
-            cursor.executemany(insert_sql, filas[i:i+batch_size])
-        conexion_db.commit()
+        # 6. Insertar en batch
+        cursor = db_conn.cursor()
+        insert_query = "INSERT INTO dolar (fechahora, valor) VALUES (%s, %s)"
+        chunk_size = 500
+        for i in range(0, len(rows), chunk_size):
+            batch = rows[i:i + chunk_size]
+            cursor.executemany(insert_query, batch)
+        db_conn.commit()
         cursor.close()
 
-        if cerrar:
-            conexion_db.close()
+        if cerrar_conexion:
+            db_conn.close()
 
-        print(">>> Inserción finalizada correctamente")
-        return {"status": "ok", "rows": len(filas)}
+        print(f">>> Inserción completada: {len(rows)} registros")
+        return {"status": "ok", "rows": len(rows)}
 
     except Exception as e:
-        print(">>> ERROR durante la carga:", e)
+        print(">>> ERROR en Lambda:", e)
         return {"status": "error", "message": str(e)}
