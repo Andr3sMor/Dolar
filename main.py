@@ -6,23 +6,23 @@ import pymysql
 import os
 from dotenv import load_dotenv
 
-# Cargar variables desde .env
+# Cargar .env
 load_dotenv(dotenv_path="/home/ubuntu/app/.env")
 
-app = FastAPI(title="API de valores del dólar")
+api = FastAPI(title="API Cotización Dólar")
 
-class Consulta(BaseModel):
-    fecha_inicio: str  # en formato "YYYY-MM-DD HH:MM:SS"
-    fecha_fin: str
+class RangoFechas(BaseModel):
+    inicio: str
+    fin: str
 
-class ValorItem(BaseModel):
+class Cotizacion(BaseModel):
     fechahora: str
     valor: float
 
-class Respuesta(BaseModel):
-    datos: List[ValorItem]
+class RespuestaCotizacion(BaseModel):
+    datos: List[Cotizacion]
 
-def obtener_conexion():
+def conectar_mysql():
     return pymysql.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -31,34 +31,33 @@ def obtener_conexion():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-@app.post("/valores", response_model=Respuesta)
-def consultar_valores(consulta: Consulta):
+@api.post("/consultar", response_model=RespuestaCotizacion)
+def consultar_cotizaciones(rango: RangoFechas):
     try:
-        fecha_inicio = datetime.strptime(consulta.fecha_inicio, "%Y-%m-%d %H:%M:%S")
-        fecha_fin = datetime.strptime(consulta.fecha_fin, "%Y-%m-%d %H:%M:%S")
+        f_inicio = datetime.strptime(rango.inicio, "%Y-%m-%d %H:%M:%S")
+        f_fin = datetime.strptime(rango.fin, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        raise HTTPException(status_code=400, detail="Formato de fecha inválido, usar YYYY-MM-DD HH:MM:SS")
+        raise HTTPException(status_code=400, detail="Formato inválido: usar YYYY-MM-DD HH:MM:SS")
 
     try:
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        query = """
+        con = conectar_mysql()
+        cur = con.cursor()
+        sql = """
             SELECT fechahora, valor
             FROM dolar
             WHERE fechahora BETWEEN %s AND %s
             ORDER BY fechahora ASC
         """
-        cursor.execute(query, (fecha_inicio, fecha_fin))
-        resultados = cursor.fetchall()
+        cur.execute(sql, (f_inicio, f_fin))
+        registros = cur.fetchall()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en DB: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error DB: {str(e)}")
     finally:
-        cursor.close()
-        conexion.close()
+        cur.close()
+        con.close()
 
-    datos = [ValorItem(fechahora=str(r["fechahora"]), valor=r["valor"]) for r in resultados]
-    return Respuesta(datos=datos)
+    return RespuestaCotizacion(datos=[Cotizacion(fechahora=str(r["fechahora"]), valor=r["valor"]) for r in registros])
 
-@app.get("/big")
-def hola():
-    return {"Big Data"}
+@api.get("/ping")
+def ping():
+    return {"status": "ok"}

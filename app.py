@@ -1,14 +1,10 @@
-from dolar import obtener_y_guardar_dolar
+from dolar_handler import guardar_cotizacion
 from datetime import datetime
 
-def f(event, context):
-    hoy = datetime.utcnow().date()
-    limite = datetime(2025, 9, 9).date()  # <--- hasta el 9 de septiembre 2025
-
-    if hoy > limite:
-        print("El proceso ya no se ejecuta después del 9 de septiembre.")
-        return {"status": "skipped", "message": "fuera de rango"}
-
-    print("Lambda ejecutada")
-    result = obtener_y_guardar_dolar()
-    return result
+def ejecutar_lambda(event, context):
+    """
+    Lambda principal que obtiene y guarda la cotización del dólar en S3.
+    """
+    print(">>> Lambda disparada para obtener cotización del dólar")
+    resultado = guardar_cotizacion()
+    return resultado

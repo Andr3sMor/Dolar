@@ -9,7 +9,7 @@ on:
 
 jobs:
   # -----------------------------
-  # 1. Tests con requirements-test.txt
+  # 1. Tests con requirements.txt
   # -----------------------------
   test:
     runs-on: ubuntu-latest
@@ -27,12 +27,14 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Install test dependencies
+      - name: Install dependencies
         run: |
           python3 -m venv env-test
           source env-test/bin/activate
-          pip install -r requirements-test.txt
-          pytest
+          pip install -r requirements.txt
+          # Ejecutar los tests con pytest
+          pytest test_dolar_handler.py -v
+          pytest test_app.py -v
 
   # -----------------------------
   # 2. Deploy de Lambda con Zappa
@@ -76,47 +78,12 @@ jobs:
           sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" zappa_settings.json
           sed -i "s|\${DB_PASS}|${{ secrets.DB_PASS }}|g" zappa_settings.json
           sed -i "s|\${DB_NAME}|${{ secrets.DB_NAME }}|g" zappa_settings.json
-      
-  
-      - name: Deploy Zappa (DB loader)
+
+      - name: Deploy Zappa (s3_to_mysql)
         run: |
           source env-lambda/bin/activate
-          if zappa status db; then
-            zappa update db
+          if zappa status s3_to_mysql; then
+            zappa update s3_to_mysql
           else
-            zappa deploy db
+            zappa deploy s3_to_mysql
           fi
-
-  # -----------------------------
-  # 3. Deploy FastAPI en EC2
-  # -----------------------------
-  deploy-ec2:
-    runs-on: ubuntu-latest
-    needs: deploy-lambda
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/parcial/Zappa_Dolar
-            git pull origin main
-          
-            if [ ! -d "venv" ]; then python3 -m venv venv; fi
-            source venv/bin/activate
-          
-            pip install -r requirements-api.txt
-          
-            # Crear/actualizar archivo .env
-            cat > /home/ubuntu/parcial/Zappa_Dolar/.env <<EOF
-            DB_HOST=${{ secrets.DB_HOST }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASS=${{ secrets.DB_PASS }}
-            DB_NAME=${{ secrets.DB_NAME }}
-            EOF
-          
-            sudo systemctl restart api

@@ -1,6 +1,6 @@
 {
     "dev": {
-        "app_function": "app.f",
+        "app_function": "app.ejecutar_lambda",
         "aws_region": "us-east-1",
         "exclude": [
             "boto3",
@@ -11,35 +11,33 @@
             "requirements-api.txt", 
             "requirements-test.txt"
         ],
-        "project_name": "zappa-dolar",
+        "project_name": "dollar-aws",
         "runtime": "python3.10",
-        "s3_bucket": "dolar-raw-eltimpeosj",
+        "s3_bucket": "    dolar-raw-awsmm",
         "keep_warm": false,
         "apigateway_enabled": false,
         "manage_roles": false,
         "role_name": "Labrole",
         "events": [
             {
-                "function": "app.f",
-                "expression": "cron(0 23 ? * * *)"
+                "function": "app.ejecutar_lambda",
+                "expression": "cron(45 17 * * ? *)"  // Ejecución a las 5:05 PM UTC, 12:05 PM COT
             }
         ]
     },
-    "db": {
-        "app_function": "db_loader.g",
+    "s3_to_mysql": {
+        "app_function": "s3_to_mysql-py.cargar_datos",
         "aws_region": "us-east-1",
         "exclude": [
             "boto3",
             "dateutil",
             "botocore",
             "s3transfer",
-            "concurrent",
-            "requirements-api.txt", 
-            "requirements-test.txt"
+            "concurrent"
         ],
-        "project_name": "zappa-db-loader",
+        "project_name": "zappa-s3-to-mysql",
         "runtime": "python3.10",
-        "s3_bucket": "dolar-raw-eltimpeosj",
+        "s3_bucket": "dolar-raw-awsmm",
         "keep_warm": false,
         "apigateway_enabled": false,
         "manage_roles": false,
@@ -52,9 +50,9 @@
         },
         "events": [
             {
-                "function": "db_loader.g",
+                "function": "s3_to_mysql-py.cargar_datos",
                 "event_source": {
-                    "arn": "arn:aws:s3:::dolar-raw-eltimpeosj",
+                    "arn": "arn:aws:s3:::dolar-raw-awsmm",
                     "events": ["s3:ObjectCreated:*"],
                     "filters": [
                         {
