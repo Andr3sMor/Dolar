@@ -21,7 +21,7 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda",
-                "expression": "cron(45 17 * * ? *)"  // Ejecución a las 5:05 PM UTC, 12:05 PM COT
+                "expression": "cron(57 17 * * ? *)"  // Ejecución a las 5:05 PM UTC, 12:05 PM COT
             }
         ]
     },
