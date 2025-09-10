@@ -19,12 +19,12 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda",
-                "expression": "cron(8 21 * * ? *)"
+                "expression": "cron(12 21 * * ? *)"
             }
         ]
     },
     "s3_to_mysql": {
-        "app_function": "s3_to_mysql-py.cargar_datos",
+        "app_function": "s3_to_mysql.cargar_datos",
         "aws_region": "us-east-1",
         "exclude": [
             "boto3",
@@ -48,7 +48,7 @@
         },
         "events": [
             {
-                "function": "s3_to_mysql-py.cargar_datos",
+                "function": "s3_to_mysql.cargar_datos",
                 "event_source": {
                     "arn": "arn:aws:s3:::dolar-raw-awsmm",
                     "events": ["s3:ObjectCreated:*"],
