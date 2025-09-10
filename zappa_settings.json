@@ -13,7 +13,7 @@
         ],
         "project_name": "dollar-aws",
         "runtime": "python3.10",
-        "s3_bucket": "    dolar-raw-awsmm",
+        "s3_bucket": "dolar-raw-awsmm",
         "keep_warm": false,
         "apigateway_enabled": false,
         "manage_roles": false,
@@ -21,7 +21,8 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda",
-                "expression": "cron(57 20 * * ? *)"  
+                "expression": "cron(3 21 * * ? *)"
+            }
         ]
     },
     "s3_to_mysql": {
