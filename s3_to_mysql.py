@@ -8,7 +8,7 @@ def cargar_datos(event, context):
     """
     Lambda que recibe un evento de S3 y carga datos a MySQL.
     """
-    conexion_db = getattr(context, "db_conn", None)  # conexión mockeada en tests
+    conexion_db = getattr(context, "db_conn", None) 
     try:
         print(">>> Iniciando Lambda carga S3 → MySQL...")
 
