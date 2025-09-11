@@ -19,7 +19,7 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda", 
-                "expression": "cron(0 15 * * ? *)"
+                "expression": "cron(6 15 * * ? *)"
             }
         ]
     },

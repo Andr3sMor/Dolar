@@ -23,7 +23,7 @@ def g(event, context):
         print("Debug")
         s3 = boto3.client("s3")
         print("s3: ", s3)
-        print(f"Bucket type {type(bucket)}, Key Type {key}")
+        print(f"Bucket type {type(bucket)}, Key Type {type(key)}")
         obj = s3.get_object(Bucket=bucket, Key=key)
         print("obj: ", obj)
         body = obj["Body"].read()
