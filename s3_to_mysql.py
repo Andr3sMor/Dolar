@@ -15,7 +15,7 @@ def g(event, context):
 
         # 1. Extraer info del evento S3
         record = event["Records"][0]
-        bucket = record["s3"]["bucket"]["name"]
+        bucket = record["s3"]["bucket"]
         key = record["s3"]["object"]["key"]
         print(f">>> Procesando archivo {key} desde bucket {bucket}")
 
@@ -23,7 +23,6 @@ def g(event, context):
         print("Debug")
         s3 = boto3.client("s3")
         print("s3: ", s3)
-        print(f"Bucket type {type(bucket)}, Key Type {type(key)}")
         obj = s3.get_object(Bucket=bucket, Key=key)
         print("obj: ", obj)
         body = obj["Body"].read()
