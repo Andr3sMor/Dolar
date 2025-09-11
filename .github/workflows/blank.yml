@@ -101,7 +101,7 @@ jobs:
       - name: Add SSH key
         run: |
           echo "${{ secrets.EC2_KEY }}" > key.pem
-          chmod 600 key.pem
+          chmod 600 github-aws-dollar.pem
 
       - name: Deploy FastAPI to EC2
         run: |
