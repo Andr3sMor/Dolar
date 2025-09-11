@@ -23,7 +23,7 @@ def g(event, context):
         print("Debug")
         s3 = boto3.client("s3")
         print("s3: ", s3)
-        obj = s3.Object(bucket,key)
+        obj = s3.get_object(bucket,key)
         print("obj: ", obj)
         body = obj["Body"].read()
         print("body: ", body)
