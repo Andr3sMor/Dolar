@@ -152,7 +152,7 @@ jobs:
             echo "DB_PORT=3306" >> .env
 
             # -------------------------------
-            # 7. Matar instancia previa de uvicorn
+            # 7. Matar instancia previa de uvicorn!
             # -------------------------------
             pkill -f "uvicorn app.main:app" || true
 
