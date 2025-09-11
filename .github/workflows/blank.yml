@@ -103,56 +103,55 @@ jobs:
           echo "${{ secrets.EC2_KEY }}" > github-aws-dollar.pem
           chmod 400 github-aws-dollar.pem
 
-    - name: Deploy FastAPI to EC2
-      run: |
-        ssh -o StrictHostKeyChecking=no -i github-aws-dollar.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          # -------------------------------
-          # 1. Actualizar paquetes y herramientas
-          # -------------------------------
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3-pip python3-venv git
-    
-          # -------------------------------
-          # 2. Clonar o actualizar repo
-          # -------------------------------
-          REPO_DIR="Dolar"
-          if [ -d "$REPO_DIR" ]; then
-              cd "$REPO_DIR"
-              git pull
-          else
-              git clone git@github.com:Andr3sMor/Dolar.git "$REPO_DIR"
-              cd "$REPO_DIR"
-          fi
-    
-          # -------------------------------
-          # 3. Crear entorno virtual y activar
-          # -------------------------------
-          python3 -m venv venv
-          source venv/bin/activate
-    
-          # -------------------------------
-          # 4. Instalar dependencias
-          # -------------------------------
-          pip install --upgrade pip
-          pip install -r requirements.txt
-    
-          # -------------------------------
-          # 5. Crear archivo .env con secrets
-          # -------------------------------
-          echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "DB_PORT=3306" >> .env
-    
-          # -------------------------------
-          # 6. Matar instancia previa de uvicorn
-          # -------------------------------
-          pkill -f "uvicorn app.main:app" || true
-    
-          # -------------------------------
-          # 7. Lanzar servidor FastAPI en segundo plano
-          # -------------------------------
-          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        EOF
-
+      - name: Deploy FastAPI to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i github-aws-dollar.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # -------------------------------
+            # 1. Actualizar paquetes y herramientas
+            # -------------------------------
+            sudo apt update && sudo apt upgrade -y
+            sudo apt install -y python3-pip python3-venv git
+      
+            # -------------------------------
+            # 2. Clonar o actualizar repo
+            # -------------------------------
+            REPO_DIR="Dolar"
+            if [ -d "$REPO_DIR" ]; then
+                cd "$REPO_DIR"
+                git pull
+            else
+                git clone git@github.com:Andr3sMor/Dolar.git "$REPO_DIR"
+                cd "$REPO_DIR"
+            fi
+      
+            # -------------------------------
+            # 3. Crear entorno virtual y activar
+            # -------------------------------
+            python3 -m venv venv
+            source venv/bin/activate
+      
+            # -------------------------------
+            # 4. Instalar dependencias
+            # -------------------------------
+            pip install --upgrade pip
+            pip install -r requirements.txt
+      
+            # -------------------------------
+            # 5. Crear archivo .env con secrets
+            # -------------------------------
+            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "DB_PORT=3306" >> .env
+      
+            # -------------------------------
+            # 6. Matar instancia previa de uvicorn
+            # -------------------------------
+            pkill -f "uvicorn app.main:app" || true
+      
+            # -------------------------------
+            # 7. Lanzar servidor FastAPI en segundo plano
+            # -------------------------------
+            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          EOF
