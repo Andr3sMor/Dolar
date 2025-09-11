@@ -119,7 +119,7 @@ jobs:
             ssh-keyscan github.com >> ~/.ssh/known_hosts
 
             # -------------------------------
-            # 3. Clonar o actualizar repo
+            # 3. Clonar o actualizar repositorio
             # -------------------------------
             REPO_DIR="Dolar"
             if [ -d "$REPO_DIR" ]; then
