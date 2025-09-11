@@ -19,7 +19,7 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda", 
-                "expression": "cron(45 1 * * ? *)"
+                "expression": "cron(55 4 * * ? *)"
             }
         ]
     },
@@ -52,9 +52,10 @@
                 "event_source": {
                     "arn": "arn:aws:s3:::dolar-raw-awsmm",
                     "events": ["s3:ObjectCreated:*"],
-                    "filter": {
-                        "suffix": ".json"
-                    }
+                    "key_filters": [{
+                        "type": "suffix",
+                        "value": ".json"
+                    }]
                 }
             }
         ]
