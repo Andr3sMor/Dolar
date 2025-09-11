@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from datetime import datetime
 from typing import List
-from app.db import get_data_between
+from db import get_data_between
 
 app = FastAPI()
 
