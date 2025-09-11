@@ -19,7 +19,7 @@
         "events": [
             {
                 "function": "app.ejecutar_lambda", 
-                "expression": "cron(35 1 * * ? *)"
+                "expression": "cron(50 1 * * ? *)"
             }
         ]
     },
@@ -54,7 +54,6 @@
                     "events": ["s3:ObjectCreated:*"],
                     "rules": [
                         {
-                            "prefix": "",
                             "suffix": ".json"
                         }
                     ]
