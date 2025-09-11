@@ -111,9 +111,15 @@ jobs:
             # -------------------------------
             sudo apt update && sudo apt upgrade -y
             sudo apt install -y python3-pip python3-venv git
-      
+
             # -------------------------------
-            # 2. Clonar o actualizar repo
+            # 2. Configurar SSH para GitHub
+            # -------------------------------
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+            # -------------------------------
+            # 3. Clonar o actualizar repo
             # -------------------------------
             REPO_DIR="Dolar"
             if [ -d "$REPO_DIR" ]; then
@@ -123,35 +129,36 @@ jobs:
                 git clone git@github.com:Andr3sMor/Dolar.git "$REPO_DIR"
                 cd "$REPO_DIR"
             fi
-      
+
             # -------------------------------
-            # 3. Crear entorno virtual y activar
+            # 4. Crear entorno virtual y activar
             # -------------------------------
             python3 -m venv venv
             source venv/bin/activate
-      
+
             # -------------------------------
-            # 4. Instalar dependencias
+            # 5. Instalar dependencias
             # -------------------------------
             pip install --upgrade pip
             pip install -r requirements.txt
-      
+
             # -------------------------------
-            # 5. Crear archivo .env con secrets
+            # 6. Crear archivo .env con secrets
             # -------------------------------
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             echo "DB_PORT=3306" >> .env
-      
+
             # -------------------------------
-            # 6. Matar instancia previa de uvicorn
+            # 7. Matar instancia previa de uvicorn
             # -------------------------------
             pkill -f "uvicorn app.main:app" || true
-      
+
             # -------------------------------
-            # 7. Lanzar servidor FastAPI en segundo plano
+            # 8. Lanzar servidor FastAPI en segundo plano
             # -------------------------------
             nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           EOF
+
