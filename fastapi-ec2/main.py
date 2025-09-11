@@ -1,20 +1,20 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Form
 from typing import List
+from pydantic import BaseModel
 from datetime import datetime
 import pymysql
 import os
 from dotenv import load_dotenv
 
-# Cargar variables desde .env
-load_dotenv(dotenv_path="/home/ubuntu/app/.env")
+# Cargar las variables de entorno
+load_dotenv()
 
-app = FastAPI(title="API de valores del dólar")
+app = FastAPI()
 
-# Modelos de Pydantic
-class Consulta(BaseModel):
-    fecha_inicio: str  # en formato "YYYY-MM-DD HH:MM:SS"
-    fecha_fin: str
+# Definir el modelo de la consulta
+class DateRange(BaseModel):
+    start: datetime
+    end: datetime
 
 class ValorItem(BaseModel):
     fechahora: str
@@ -34,15 +34,10 @@ def obtener_conexion():
     )
 
 @app.post("/dolar", response_model=Respuesta)
-def consultar_valores(consulta: Consulta):
-    # Convertir las fechas de cadena a datetime
-    try:
-        fecha_inicio = datetime.strptime(consulta.fecha_inicio, "%Y-%m-%d %H:%M:%S")
-        fecha_fin = datetime.strptime(consulta.fecha_fin, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Formato de fecha inválido, usar YYYY-MM-DD HH:MM:SS")
+async def get_dolar(date_range: DateRange):
+    start = date_range.start
+    end = date_range.end
 
-    # Consultar la base de datos
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -52,18 +47,14 @@ def consultar_valores(consulta: Consulta):
             WHERE fechahora BETWEEN %s AND %s
             ORDER BY fechahora ASC
         """
-        cursor.execute(query, (fecha_inicio, fecha_fin))
-        resultados = cursor.fetchall()
+        cursor.execute(query, (start, end))
+        results = cursor.fetchall()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en DB: {str(e)}")
     finally:
         cursor.close()
         conexion.close()
 
-    # Convertir los resultados a objetos ValorItem
-    datos = [ValorItem(fechahora=str(r["fechahora"]), valor=r["valor"]) for r in resultados]
-    return Respuesta(datos=datos)
-
-@app.get("/big")
-def hola():
-    return {"Big Data"}
+    # Formatear la respuesta
+    data = [ValorItem(fechahora=str(r["fechahora"]), valor=r["valor"]) for r in results]
+    return Respuesta(datos=data)
