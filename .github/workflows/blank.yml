@@ -87,3 +87,42 @@ jobs:
           else
             zappa deploy s3_to_mysql
           fi
+
+  # -----------------------------
+  # 3. Deploy FastAPI a EC2
+  # -----------------------------
+  deploy-ec2:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Add SSH key
+        run: |
+          echo "${{ secrets.EC2_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Deploy FastAPI to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Instalar dependencias
+            sudo apt update
+            sudo apt install -y python3-pip git
+
+            # Crear archivo .env con los secrets de DB
+            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "DB_PORT=3306" >> .env
+
+            # Instalar dependencias de FastAPI
+            pip3 install -r ../requirements.txt
+
+            # Matar instancia previa de uvicorn (si hay)
+            pkill -f "uvicorn app.main:app" || true
+
+            # Lanzar el servidor FastAPI con Uvicorn en segundo plano
+            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          EOF
