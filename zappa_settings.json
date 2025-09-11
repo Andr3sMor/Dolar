@@ -52,12 +52,9 @@
                 "event_source": {
                     "arn": "arn:aws:s3:::dolar-raw-awsmm",
                     "events": ["s3:ObjectCreated:*"],
-                    "key_filters": [
-                        {
-                            "type": "suffix",
-                            "value": ".json"
-                        }
-                    ]
+                    "filter": {
+                        "suffix": ".json"
+                    }
                 }
             }
         ]
