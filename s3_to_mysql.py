@@ -23,10 +23,11 @@ def g(event, context):
         print("Debug")
         s3 = boto3.client("s3")
         print("s3: ", s3)
-        obj = s3.get_object(bucket,key)
+        print(f"Bucket type {type(bucket)}, Key Type {key}")
+        obj = s3.get_object(Bucket=bucket, Key=key)
         print("obj: ", obj)
         body = obj["Body"].read()
-        print("body: ", body)
+        print("body: ", obj)
         print(f">>> Archivo descargado, {len(body)} bytes")
 
         # 3. Cargar JSON
