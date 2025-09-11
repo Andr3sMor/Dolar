@@ -26,6 +26,7 @@
     "s3_to_mysql": {
         "app_function": "s3_to_mysql.g", 
         "aws_region": "us-east-1",
+        "memory_size": 512,
         "exclude": [
             "boto3",
             "dateutil",

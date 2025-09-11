@@ -3,7 +3,6 @@ import json
 import boto3
 from datetime import datetime
 import pymysql
-from botocore.config import Config
 
 def g(event, context):
     """
@@ -22,11 +21,7 @@ def g(event, context):
 
         # 2. Descargar archivo desde S3
         print("Debug")
-        s3 = boto3.client("s3", config=Config(
-                            connect_timeout=10,
-                            read_timeout=30,
-                            retries={'max_attempts': 3}
-                        ))
+        s3 = boto3.client("s3")
         print("s3: ", s3)
         obj = s3.get_object(Bucket=bucket, Key=key)
         print("obj: ", obj)
