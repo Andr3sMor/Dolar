@@ -97,7 +97,7 @@ jobs:
           script: |
             set -e  # detener si algo falla
 
-            cd /home/ubuntu/parcial/Zappa_Dolar
+            cd /home/ubuntu/Dolar
 
             echo ">>> Actualizando repositorio"
             git fetch --all
