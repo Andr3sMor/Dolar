@@ -97,12 +97,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Add SSH key
         run: |
           echo "${{ secrets.EC2_KEY }}" > github-aws-dollar.pem
           chmod 400 github-aws-dollar.pem
-
       - name: Deploy FastAPI to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i github-aws-dollar.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
@@ -111,13 +109,11 @@ jobs:
             # -------------------------------
             sudo apt update && sudo apt upgrade -y
             sudo apt install -y python3-pip python3-venv git
-
             # -------------------------------
             # 2. Configurar SSH para GitHub
             # -------------------------------
             mkdir -p ~/.ssh
             ssh-keyscan github.com >> ~/.ssh/known_hosts
-
             # -------------------------------
             # 3. Clonar o actualizar repositorio
             # -------------------------------
@@ -129,19 +125,17 @@ jobs:
                 git clone git@github.com:Andr3sMor/Dolar.git "$REPO_DIR"
                 cd "$REPO_DIR"
             fi
-
             # -------------------------------
             # 4. Crear entorno virtual y activar
             # -------------------------------
             python3 -m venv venv
             source venv/bin/activate
-
             # -------------------------------
             # 5. Instalar dependencias
             # -------------------------------
             pip install --upgrade pip
             pip install -r requirements.txt
-
+            pip install python-dotenv
             # -------------------------------
             # 6. Crear archivo .env con secrets
             # -------------------------------
@@ -150,18 +144,30 @@ jobs:
             echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             echo "DB_PORT=3306" >> .env
-
             # -------------------------------
-            # 7. Matar instancia previa de uvicorn!
+            # 7. Configurar systemd
             # -------------------------------
-            pkill -f "uvicorn app.main:app" || true
-
+            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<EOL
+            [Unit]
+            Description=FastAPI Dolar Service
+            After=network.target
+  
+            [Service]
+            User=${{ secrets.EC2_USER }}
+            WorkingDirectory=/home/${{ secrets.EC2_USER }}/$REPO_DIR/fastapi-ec2
+            Environment="PATH=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin"
+            ExecStart=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+            Restart=always
+            StandardOutput=append:/var/log/fastapi-dolar.log
+            StandardError=append:/var/log/fastapi-dolar-error.log
+  
+            [Install]
+            WantedBy=multi-user.target
+            EOL
             # -------------------------------
-            # 8. Lanzar servidor FastAPI en segundo plano
+            # 8. Habilitar e iniciar el servicio
             # -------------------------------
-            ls
-            cd fastapi-ec2
-            uvicorn main:app --host 0.0.0.0 --port 8000
-            nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+            sudo systemctl daemon-reload
+            sudo systemctl start fastapi-dolar
+            sudo systemctl enable fastapi-dolar
           EOF
-
