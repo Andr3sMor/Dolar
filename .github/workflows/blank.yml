@@ -83,91 +83,46 @@ jobs:
   # 3. Deploy FastAPI a EC2
   # -----------------------------
   deploy-ec2:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Add SSH key
-        run: |
-          echo "${{ secrets.VOCKEY }}" > vockey.pem
-          chmod 400 vockey.pem
-      - name: Deploy FastAPI to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i vockey.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            # -------------------------------
-            # 1. Actualizar paquetes y herramientas
-            # -------------------------------
-            sudo apt update && sudo apt upgrade -y
-            sudo apt install -y python3-pip python3-venv git
-            # -------------------------------
-            # 2. Configurar SSH para GitHub
-            # -------------------------------
-            mkdir -p ~/.ssh
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
-            # -------------------------------
-            # 3. Clonar o actualizar repositorio
-            # -------------------------------
-            REPO_DIR="Dolar"
-            if [ -d "$REPO_DIR" ]; then
-                cd "$REPO_DIR"
-                git pull
-            else
-                git clone git@github.com:Andr3sMor/Dolar.git "$REPO_DIR"
-                cd "$REPO_DIR"
-            fi
-            # -------------------------------
-            # 4. Crear entorno virtual y activar
-            # -------------------------------
+  runs-on: ubuntu-latest
+  needs: deploy-lambda
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.VOCKEY }}
+        script: |
+          set -e  # detener si algo falla
+
+          cd /home/ubuntu/parcial/Zappa_Dolar
+
+          echo ">>> Actualizando repositorio"
+          git fetch --all
+          git reset --hard origin/main
+
+          echo ">>> Creando/activando entorno virtual"
+          if [ ! -d "venv" ]; then
             python3 -m venv venv
-            source venv/bin/activate
-            # -------------------------------
-            # 5. Instalar dependencias
-            # -------------------------------
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install python-dotenv uvicorn
-            # -------------------------------
-            # 6. Crear archivo .env con secrets
-            # -------------------------------
-            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
-            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-            echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
-            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-            echo "DB_PORT=3306" >> .env
-            # -------------------------------
-            # 7. Detener servicio existente (si hay uno)
-            # -------------------------------
-            sudo systemctl stop fastapi-dolar 2>/dev/null || true
-            # -------------------------------
-            # 8. Configurar systemd
-            # -------------------------------
-            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<EOL
-            [Unit]
-            Description=FastAPI Dolar Service
-            After=network.target
+          fi
+          source venv/bin/activate
 
-            [Service]
-            User=${{ secrets.EC2_USER }}
-            WorkingDirectory=/home/${{ secrets.EC2_USER }}/Dolar
-            EnvironmentFile=/home/${{ secrets.EC2_USER }}/Dolar/.env
-            ExecStart=/home/${{ secrets.EC2_USER }}/Dolar/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-            Restart=always
-            RestartSec=5
-            StandardOutput=append:/var/log/fastapi-dolar.log
-            StandardError=append:/var/log/fastapi-dolar-error.log
+          echo ">>> Instalando dependencias"
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-            [Install]
-            WantedBy=multi-user.target
-            EOL
-            # -------------------------------
-            # 9. Recargar systemd y reiniciar servicio
-            # -------------------------------
-            sudo systemctl daemon-reload
-            sudo systemctl start fastapi-dolar
-            sudo systemctl enable fastapi-dolar
-            # -------------------------------
-            # 10. Verificar estado del servicio
-            # -------------------------------
-            sudo systemctl status fastapi-dolar --no-pager -l
+          echo ">>> Creando archivo .env"
+          cat > .env <<EOF
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASS=${{ secrets.DB_PASS }}
+          DB_NAME=${{ secrets.DB_NAME }}
           EOF
+
+          echo ">>> Reiniciando servicio"
+          sudo systemctl daemon-reload
+          sudo systemctl restart fastapi-dolar
+          sudo systemctl status fastapi-dolar --no-pager -l || true
+
