@@ -17,7 +17,7 @@ def get_data_between(start, end):
     cursor = conn.cursor()
     query = """
         SELECT fechahora, valor 
-        FROM dólar
+        FROM dolar
         WHERE fechahora BETWEEN %s AND %s
     """
     cursor.execute(query, (start, end))

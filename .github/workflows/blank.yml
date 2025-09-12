@@ -79,7 +79,7 @@ jobs:
             zappa deploy s3_to_mysql
           fi
 
-  # -----------------------------
+    # -----------------------------
   # 3. Deploy FastAPI a EC2
   # -----------------------------
   deploy-ec2:
@@ -142,16 +142,16 @@ jobs:
             # -------------------------------
             # 8. Configurar systemd
             # -------------------------------
-            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<'EOL'
+            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<EOL
             [Unit]
             Description=FastAPI Dolar Service
             After=network.target
 
             [Service]
             User=${{ secrets.EC2_USER }}
-            WorkingDirectory=/home/${{ secrets.EC2_USER }}/$REPO_DIR/fastapi-ec2
-            Environment="PATH=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin"
-            ExecStart=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+            WorkingDirectory=/home/${{ secrets.EC2_USER }}/Dolar
+            EnvironmentFile=/home/${{ secrets.EC2_USER }}/Dolar/.env
+            ExecStart=/home/${{ secrets.EC2_USER }}/Dolar/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
             Restart=always
             RestartSec=5
             StandardOutput=append:/var/log/fastapi-dolar.log
@@ -169,5 +169,5 @@ jobs:
             # -------------------------------
             # 10. Verificar estado del servicio
             # -------------------------------
-            sudo systemctl status fastapi-dolar
+            sudo systemctl status fastapi-dolar --no-pager -l
           EOF
