@@ -1,10 +1,9 @@
 name: CI/CD Pipeline
-
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -17,8 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
+          python-version: "3.11"
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -26,13 +24,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-
       - name: Install dependencies
         run: |
           python3 -m venv env-test
           source env-test/bin/activate
           pip install -r requirements.txt
-          # Ejecutar los tests con pytest
           pytest test_dolar_handler.py -v
           pytest test_app.py -v
 
@@ -46,22 +42,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
+          python-version: "3.11"
       - name: Replace env vars in zappa_settings.json
         run: |
           sed -i "s|\${DB_HOST}|${{ secrets.DB_HOST }}|g" zappa_settings.json
           sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" zappa_settings.json
           sed -i "s|\${DB_PASS}|${{ secrets.DB_PASS }}|g" zappa_settings.json
           sed -i "s|\${DB_NAME}|${{ secrets.DB_NAME }}|g" zappa_settings.json
-
       - name: Install lambda dependencies
         run: |
           python3 -m venv env-lambda
           source env-lambda/bin/activate
           pip install -r requirements.txt
           pip install zappa
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -69,7 +62,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-
       - name: Deploy with Zappa (dollar downloader)
         run: |
           source env-lambda/bin/activate
@@ -78,7 +70,6 @@ jobs:
           else
             zappa deploy dev
           fi
-
       - name: Deploy Zappa (s3_to_mysql)
         run: |
           source env-lambda/bin/activate
@@ -99,11 +90,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Add SSH key
         run: |
-          echo "${{ secrets.EC2_KEY }}" > github-aws-dollar.pem
-          chmod 400 github-aws-dollar.pem
+          echo "${{ secrets.VOCKEY }}" > vockey.pem
+          chmod 400 vockey.pem
       - name: Deploy FastAPI to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i github-aws-dollar.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i vockey.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             # -------------------------------
             # 1. Actualizar paquetes y herramientas
             # -------------------------------
@@ -135,7 +126,7 @@ jobs:
             # -------------------------------
             pip install --upgrade pip
             pip install -r requirements.txt
-            pip install python-dotenv
+            pip install python-dotenv uvicorn
             # -------------------------------
             # 6. Crear archivo .env con secrets
             # -------------------------------
@@ -145,29 +136,38 @@ jobs:
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             echo "DB_PORT=3306" >> .env
             # -------------------------------
-            # 7. Configurar systemd
+            # 7. Detener servicio existente (si hay uno)
             # -------------------------------
-            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<EOL
+            sudo systemctl stop fastapi-dolar 2>/dev/null || true
+            # -------------------------------
+            # 8. Configurar systemd
+            # -------------------------------
+            sudo tee /etc/systemd/system/fastapi-dolar.service > /dev/null <<'EOL'
             [Unit]
             Description=FastAPI Dolar Service
             After=network.target
-  
+
             [Service]
             User=${{ secrets.EC2_USER }}
             WorkingDirectory=/home/${{ secrets.EC2_USER }}/$REPO_DIR/fastapi-ec2
             Environment="PATH=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin"
             ExecStart=/home/${{ secrets.EC2_USER }}/$REPO_DIR/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
             Restart=always
+            RestartSec=5
             StandardOutput=append:/var/log/fastapi-dolar.log
             StandardError=append:/var/log/fastapi-dolar-error.log
-  
+
             [Install]
             WantedBy=multi-user.target
             EOL
             # -------------------------------
-            # 8. Habilitar e iniciar el servicio
+            # 9. Recargar systemd y reiniciar servicio
             # -------------------------------
             sudo systemctl daemon-reload
             sudo systemctl start fastapi-dolar
             sudo systemctl enable fastapi-dolar
+            # -------------------------------
+            # 10. Verificar estado del servicio
+            # -------------------------------
+            sudo systemctl status fastapi-dolar
           EOF
