@@ -24,7 +24,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - name: Install dependencies
+      - name: Install dependencies & run tests
         run: |
           python3 -m venv env-test
           source env-test/bin/activate
@@ -79,50 +79,49 @@ jobs:
             zappa deploy s3_to_mysql
           fi
 
-    # -----------------------------
+  # -----------------------------
   # 3. Deploy FastAPI a EC2
   # -----------------------------
   deploy-ec2:
-  runs-on: ubuntu-latest
-  needs: deploy-lambda
-  steps:
-    - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    needs: deploy-lambda
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.VOCKEY }}
-        script: |
-          set -e  # detener si algo falla
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.VOCKEY }}
+          script: |
+            set -e  # detener si algo falla
 
-          cd /home/ubuntu/parcial/Zappa_Dolar
+            cd /home/ubuntu/parcial/Zappa_Dolar
 
-          echo ">>> Actualizando repositorio"
-          git fetch --all
-          git reset --hard origin/main
+            echo ">>> Actualizando repositorio"
+            git fetch --all
+            git reset --hard origin/main
 
-          echo ">>> Creando/activando entorno virtual"
-          if [ ! -d "venv" ]; then
-            python3 -m venv venv
-          fi
-          source venv/bin/activate
+            echo ">>> Creando/activando entorno virtual"
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+            source venv/bin/activate
 
-          echo ">>> Instalando dependencias"
-          pip install --upgrade pip
-          pip install -r requirements.txt
+            echo ">>> Instalando dependencias"
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
-          echo ">>> Creando archivo .env"
-          cat > .env <<EOF
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASS=${{ secrets.DB_PASS }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          EOF
+            echo ">>> Creando archivo .env"
+            cat > .env <<EOF
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASS=${{ secrets.DB_PASS }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            EOF
 
-          echo ">>> Reiniciando servicio"
-          sudo systemctl daemon-reload
-          sudo systemctl restart fastapi-dolar
-          sudo systemctl status fastapi-dolar --no-pager -l || true
-
+            echo ">>> Reiniciando servicio"
+            sudo systemctl daemon-reload
+            sudo systemctl restart fastapi-dolar
+            sudo systemctl status fastapi-dolar --no-pager -l || true
